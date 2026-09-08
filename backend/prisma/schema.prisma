@@ -98,7 +98,7 @@ model Patient {
   bloodGroup        String?
   allergies         String?
   chronicConditions String?
-  
+  preferredLanguage String? 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -127,7 +127,7 @@ model Provider {
   rating            Float?      @default(0)
   consultationFee   Float?      @default(0)
   permittedRegions  String[]    
-  
+  languages         String[]    @default(["en"])
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -180,6 +180,7 @@ model ProviderAvailability {
   dayOfWeek         Int         // 0=Sunday, 1=Monday, ...
   startTime         String      // "09:00"
   endTime           String      // "17:00"
+  slotDuration      Int         @default(30) 
   isAvailable       Boolean     @default(true)
   date              DateTime?
   isRecurring       Boolean     @default(true)
@@ -201,14 +202,15 @@ model Appointment {
   
   appointmentDate   DateTime
   startTime         String              // "10:00"
-  endTime           String              // "10:30"
+  endTime           String? 
   status            AppointmentStatus   @default(PENDING)
   type              ConsultationType    @default(VIRTUAL)
   reason            String?
   notes             String?
   cancellationReason String?
   cancelledAt       DateTime?
-  
+   reminderSent      Boolean             @default(false)  // ⬅️ ADD THIS
+  reminderSentAt    DateTime?                           // ⬅️ ADD THIS
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
