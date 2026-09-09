@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { getProviderProfile, updateProviderProfile } from "../../services/providerService";
 import { uploadProfileImage } from "../../services/authService";
+import { SERVER_URL } from "../../services/api";
 
 const ProviderProfile = () => {
   const navigate = useNavigate();
@@ -186,7 +187,7 @@ const ProviderProfile = () => {
             <div className="relative">
               <Avatar className="h-20 w-20 border-4 border-white/20">
                 <AvatarImage 
-                  src={profile.profileImage ? `http://localhost:5000${profile.profileImage}` : undefined} 
+                  src={profile.profileImage ? `${SERVER_URL}${profile.profileImage}` : undefined} 
                   alt={getFullName()}
                 />
                 <AvatarFallback className="text-2xl bg-white/20 text-white">
