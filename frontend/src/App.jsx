@@ -42,6 +42,7 @@ import AdminAppointments from "./pages/admin/AdminAppointments";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
+
 function App() {
   return (
     <BrowserRouter>
@@ -97,6 +98,8 @@ function App() {
 <Route path="admin/appointments" element={<AdminAppointments />} />
 <Route path="admin/settings" element={<AdminSettings />} />
 <Route path="admin/analytics" element={<AdminAnalytics />} />
+
+
         </Route>
 
         {/* Catch all */}

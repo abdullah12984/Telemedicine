@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -13,27 +13,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Stethoscope,
   Search,
   Loader2,
-  User,
-  Mail,
   Star,
-  Calendar,
   AlertCircle,
-  CheckCircle,
   Eye,
+  Award,
+  MapPin,
+  DollarSign,
+  Users,
+  Mail,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAdminProviders } from "../../services/adminService";
 
 const AdminProviders = () => {
-  const navigate = useNavigate();
   const [providers, setProviders] = useState([]);
   const [filteredProviders, setFilteredProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ✅ Dialog state
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -66,6 +77,12 @@ const AdminProviders = () => {
       setFilteredProviders(providers);
     }
   }, [searchTerm, providers]);
+
+  // ✅ Open dialog with provider details
+  const handleViewProvider = (provider) => {
+    setSelectedProvider(provider);
+    setShowDialog(true);
+  };
 
   if (loading) {
     return (
@@ -147,9 +164,13 @@ const AdminProviders = () => {
                       <TableCell>
                         <Badge variant="outline">{provider.specialty}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm">{provider.licenseNumber}</TableCell>
+                      <TableCell className="text-sm">
+                        {provider.licenseNumber}
+                      </TableCell>
                       <TableCell>{provider.email}</TableCell>
-                      <TableCell className="text-center">{provider.totalPatients || 0}</TableCell>
+                      <TableCell className="text-center">
+                        {provider.totalPatients || 0}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -168,10 +189,11 @@ const AdminProviders = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
+                        {/* ✅ Opens dialog instead of navigating */}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/dashboard/admin/providers/${provider.id}`)}
+                          onClick={() => handleViewProvider(provider)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -184,6 +206,140 @@ const AdminProviders = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* ✅ Provider Details Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Provider Details</DialogTitle>
+          </DialogHeader>
+
+          {selectedProvider && (
+            <div className="space-y-4">
+              {/* Profile Header */}
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                <Avatar className="h-20 w-20">
+                  <AvatarFallback className="bg-green-100 text-green-600 text-2xl">
+                    {selectedProvider.firstName?.charAt(0)}
+                    {selectedProvider.lastName?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold">
+                    Dr. {selectedProvider.firstName} {selectedProvider.lastName}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Stethoscope className="h-4 w-4 text-green-600" />
+                    <span className="text-gray-600">
+                      {selectedProvider.specialty}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {selectedProvider.email}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-medium">
+                        {selectedProvider.rating || 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-gray-500">
+                      <Users className="h-4 w-4" />
+                      <span>{selectedProvider.totalPatients || 0} patients</span>
+                    </div>
+                  </div>
+                </div>
+                <Badge
+                  className={
+                    selectedProvider.isActive
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }
+                >
+                  {selectedProvider.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+
+              {/* License Information */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Award className="h-4 w-4 text-green-600" />
+                      License Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">License Number:</span>
+                      <span className="font-medium">
+                        {selectedProvider.licenseNumber || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">License State:</span>
+                      <span className="font-medium">
+                        {selectedProvider.licenseState || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Experience:</span>
+                      <span className="font-medium">
+                        {selectedProvider.experienceYears || 0} years
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      Fee & Regions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Consultation Fee:</span>
+                      <span className="font-medium">
+                        ${selectedProvider.consultationFee || 0}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Permitted Regions:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(selectedProvider.permittedRegions || []).length > 0 ? (
+                          selectedProvider.permittedRegions.map((region) => (
+                            <Badge key={region} variant="outline" className="text-xs">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {region}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-xs">N/A</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
