@@ -20,7 +20,6 @@ export const apiCall = async (endpoint, options = {}) => {
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
-
   const config = {
     ...options,
     headers: {

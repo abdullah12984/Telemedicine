@@ -131,7 +131,7 @@ const TriageStatus = () => {
   if (!triageData) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
           <h2 className="text-2xl font-bold">Triage Status</h2>
           <p className="text-purple-100 mt-1">Track the status of your symptom submission</p>
         </div>

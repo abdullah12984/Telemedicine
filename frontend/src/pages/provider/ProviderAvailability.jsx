@@ -98,7 +98,7 @@ const handleAddSlot = (day) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">Availability</h2>

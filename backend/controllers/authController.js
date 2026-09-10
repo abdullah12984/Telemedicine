@@ -26,6 +26,26 @@ const signup = async (req, res) => {
       department
     } = req.body;
 
+    if (role && role.toUpperCase() === "ADMIN") {
+      return res.status(403).json({
+        message: "Admin accounts cannot be created through signup. Please contact system administrator.",
+      });
+    }
+
+    // ✅ CHECK 2: Reserved admin email block karein
+    if (email === "Admin112233@gmail.com") {
+      return res.status(403).json({
+        message: "This email is reserved for administrator. Please use a different email.",
+      });
+    }
+
+    // ✅ Check required fields (ye pehle se hai)
+    if (!email || !password || !role || !firstName || !lastName) {
+      return res.status(400).json({
+        message: "Email, password, role, firstName and lastName are required",
+      });
+    }
+
     // Check required fields
     if (!email || !password || !role || !firstName || !lastName) {
       return res.status(400).json({
