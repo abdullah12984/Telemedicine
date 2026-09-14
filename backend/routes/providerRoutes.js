@@ -16,6 +16,7 @@ const {
   getProviderPrescriptions,
   updatePrescriptionStatus,
   getAvailability,
+  getConsultationById,
   updateAvailability,
   getRefillRequests,
   processRefillRequest,
@@ -43,7 +44,7 @@ router.get("/patients/:patientId", getPatientDetails);
 router.get("/consultations", getConsultations);
 router.post("/consultations/:appointmentId/start", startConsultation);
 router.put("/consultations/:consultationId/complete", completeConsultation);
-
+router.get("/consultations/:consultationId", getConsultationById);
 // Prescriptions
 router.post("/consultations/:consultationId/prescriptions", createPrescription);
 router.get("/prescriptions", getProviderPrescriptions);

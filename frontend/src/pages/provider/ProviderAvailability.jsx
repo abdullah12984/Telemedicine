@@ -15,7 +15,13 @@ import {
   AlertCircle
 } from "lucide-react";
 import { getAvailability, updateAvailability } from "../../services/providerService";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 const days = [
   { value: 0, label: "Sunday" },
   { value: 1, label: "Monday" },
@@ -54,6 +60,7 @@ const handleAddSlot = (day) => {
     dayOfWeek: day,
     startTime: "09:00",  // ✅ Always 2-digit format
     endTime: "17:00",    // ✅ Always 2-digit format
+    slotDuration: 30,   
     isAvailable: true,
     isRecurring: true,
     id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -165,46 +172,71 @@ const handleAddSlot = (day) => {
                 ) : (
                   <div className="space-y-2">
                     {daySlots.map((slot, index) => {
-                      const globalIndex = availability.indexOf(slot);
-                      const uniqueKey = `${slot.dayOfWeek}-${slot.startTime}-${slot.endTime}-${index}`;
-                      return (
-                        <div
-                          key={slot.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                        >
-                          <Input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => handleSlotChange(globalIndex, "startTime", e.target.value)}
-                            className="w-28"
-                          />
-                          <span className="text-gray-400">to</span>
-                          <Input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => handleSlotChange(globalIndex, "endTime", e.target.value)}
-                            className="w-28"
-                          />
-                          <div className="flex items-center gap-2 ml-2">
-                            <Switch
-                              checked={slot.isAvailable}
-                              onCheckedChange={(checked) => handleSlotChange(globalIndex, "isAvailable", checked)}
-                            />
-                            <Label className="text-sm">
-                              {slot.isAvailable ? "Available" : "Unavailable"}
-                            </Label>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-500 hover:text-red-700 ml-auto"
-                            onClick={() => handleRemoveSlot(globalIndex)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      );
-                    })}
+  const globalIndex = availability.indexOf(slot);
+  return (
+    <div
+      key={slot.id}
+      className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg"
+    >
+      <Input
+        type="time"
+        value={slot.startTime}
+        onChange={(e) => handleSlotChange(globalIndex, "startTime", e.target.value)}
+        className="w-33"
+      />
+      <span className="text-gray-400">to</span>
+      <Input
+        type="time"
+        value={slot.endTime}
+        onChange={(e) => handleSlotChange(globalIndex, "endTime", e.target.value)}
+        className="w-33"
+      />
+
+      {/* ✅ Slot Duration Input */}
+      <div className="flex items-center gap-2">
+        <Label className="text-xs text-gray-500 whitespace-nowrap">Slot:</Label>
+        <Select
+          value={String(slot.slotDuration || 30)}
+          onValueChange={(val) =>
+            handleSlotChange(globalIndex, "slotDuration", parseInt(val))
+          }
+        >
+          <SelectTrigger className="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="15">15 min</SelectItem>
+            <SelectItem value="20">20 min</SelectItem>
+            <SelectItem value="30">30 min</SelectItem>
+            <SelectItem value="45">45 min</SelectItem>
+            <SelectItem value="60">60 min</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2 ml-2">
+        <Switch
+          checked={slot.isAvailable}
+          onCheckedChange={(checked) =>
+            handleSlotChange(globalIndex, "isAvailable", checked)
+          }
+        />
+        <Label className="text-sm">
+          {slot.isAvailable ? "Available" : "Unavailable"}
+        </Label>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-red-500 hover:text-red-700 ml-auto"
+        onClick={() => handleRemoveSlot(globalIndex)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+})}
                   </div>
                 )}
               </div>

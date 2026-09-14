@@ -107,4 +107,8 @@ export const getInvoices = async (status = '') => {
   return apiCall(`/patient/invoices${query}`);
 };
 
+export const getProviderSlots = async (providerId, date) => {
+  return apiCall(`/patient/providers/${providerId}/slots?date=${date}`);
+};
+
 

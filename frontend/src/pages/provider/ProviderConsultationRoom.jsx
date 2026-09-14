@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
+import { completeConsultation } from "../../services/providerService";
 const ProviderConsultationRoom = () => {
   const navigate = useNavigate();
   const { consultationId } = useParams();
@@ -195,10 +195,18 @@ const ProviderConsultationRoom = () => {
           }
         });
 
-        socket.on("call-ended", () => {
+                socket.on("call-ended", async () => {
           setIsConnected(false);
           handleCleanup();
-          navigate("/dashboard/provider/consultations", { replace: true });
+          try {
+            await completeConsultation(consultationId, {
+              duration: Math.round(duration / 60) || 1,
+              visitNotes: "Consultation completed via video call",
+            });
+          } catch (err) {
+            console.error(err);
+          }
+          navigate(`/dashboard/provider/create-prescription/${consultationId}`, { replace: true });
         });
 
         // Join room
@@ -477,13 +485,25 @@ const ProviderConsultationRoom = () => {
             <Button variant="outline" onClick={() => setShowEndDialog(false)}>
               Cancel
             </Button>
-            <Button
+                        <Button
               variant="destructive"
-              onClick={() => {
+              onClick={async () => {
                 setShowEndDialog(false);
                 socket.emit("end-call", { consultationId });
                 handleCleanup();
-                navigate("/dashboard/provider/consultations", { replace: true });
+
+                // ✅ Mark consultation and appointment as COMPLETED
+                try {
+                  await completeConsultation(consultationId, {
+                    duration: Math.round(duration / 60) || 1,
+                    visitNotes: "Consultation completed via video call",
+                  });
+                } catch (err) {
+                  console.error("Failed to complete consultation:", err);
+                }
+
+                // ✅ Immediately redirect doctor to Create Prescription
+                navigate(`/dashboard/provider/create-prescription/${consultationId}`, { replace: true });
               }}
             >
               <PhoneOff className="h-4 w-4 mr-2" /> End Call

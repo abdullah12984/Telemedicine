@@ -91,8 +91,13 @@ const ProviderConsultations = () => {
     navigate(`/dashboard/provider/create-prescription/${consultationId}`);
   };
 
-  const handleStartConsultation = (consultationId) => {
-    navigate(`/dashboard/provider/consultation/${consultationId}`);
+  // const handleStartConsultation = (consultationId) => {
+  //   navigate(`/dashboard/provider/consultation/${consultationId}`);
+  // };
+
+    const handleStartConsultation = (consultation) => {
+    const roomId = consultation.appointmentId || consultation.appointment?.id || consultation.id;
+    navigate(`/dashboard/provider/consultation/${roomId}`);
   };
 
   if (loading) {
@@ -234,7 +239,8 @@ const ProviderConsultations = () => {
                               <Button
                                 size="sm"
                                 className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleStartConsultation(consultation.id)}
+                                // onClick={() => handleStartConsultation(consultation.id)}
+                                onClick={() => handleStartConsultation(consultation)}
                               >
                                 <Video className="h-4 w-4 mr-1" />
                                 Start Consultation

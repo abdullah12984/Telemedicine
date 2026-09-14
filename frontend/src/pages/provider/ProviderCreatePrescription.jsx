@@ -25,7 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createPrescription, getPatientDetails } from "../../services/providerService";
+import { createPrescription, getConsultationDetails } from "../../services/providerService";
 
 const ProviderCreatePrescription = () => {
   const navigate = useNavigate();
@@ -62,17 +62,30 @@ const ProviderCreatePrescription = () => {
     "After meals",
   ];
 
-  // Fetch patient info (if consultationId exists)
+   // Fetch REAL patient info from consultation
   useEffect(() => {
-    if (consultationId) {
-      // In real app, fetch patient info from consultation
-      // For now, set mock data
-      setPatientInfo({
-        name: "John Doe",
-        email: "john@example.com",
-        phone: "+1 234 567 890",
-      });
-    }
+    const fetchConsultation = async () => {
+      if (!consultationId) return;
+      try {
+        setLoading(true);
+        const response = await getConsultationDetails(consultationId);
+        if (response.success && response.data) {
+          const cons = response.data;
+          const patient = cons.patient;
+          setPatientInfo({
+            name: `${patient?.firstName || ""} ${patient?.lastName || ""}`.trim() || "Patient",
+            email: patient?.user?.email || "Not available",
+            phone: patient?.phone || "Not available",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load patient info:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConsultation();
   }, [consultationId]);
 
   const handleChange = (e) => {

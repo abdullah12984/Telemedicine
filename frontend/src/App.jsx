@@ -3,7 +3,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import AuthLayout from "./layouts/AuthLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
-
+import NotificationsPage from "./pages/common/NotificationsPage";
 // Patient Pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import BookAppointment from "./pages/patient/BookAppointment";
@@ -53,6 +53,9 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Navigate to="/login" />} />
         </Route>
+
+        {/* Notifications Route */}
+<Route path="notifications" element={<NotificationsPage />} />
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>

@@ -18,6 +18,7 @@ const {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   getInvoices,
+  getProviderSlots, 
 } = require("../controllers/patientController");
 
 // All routes require authentication
@@ -41,7 +42,7 @@ router.put("/appointments/:id/cancel", cancelAppointment);
 
 // Providers
 router.get("/providers", getAvailableProviders);
-
+router.get("/providers/:providerId/slots", getProviderSlots);
 // Prescriptions
 router.get("/prescriptions", getPrescriptions);
 router.post("/prescriptions/:prescriptionId/refill", requestRefill);

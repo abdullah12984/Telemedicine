@@ -10,6 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
 const server = http.createServer(app);
+const notificationRoutes = require("./routes/notificationRoutes");
 const allowedOrigins = [
   'http://localhost:5173',
   process.env.FRONTEND_URL,
@@ -74,6 +75,7 @@ app.use('/api/patient', patientRoutes);
 app.use("/api/provider", providerRoutes);
 app.use("/api/nurse", nurseRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 // Health check
 app.get('/api/health', async (req, res) => {
   try {

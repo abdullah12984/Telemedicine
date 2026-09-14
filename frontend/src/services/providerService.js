@@ -114,3 +114,7 @@ export const processRefillRequest = async (requestId, status) => {
     body: JSON.stringify({ status }),
   });
 };
+
+export const getConsultationDetails = async (consultationId) => {
+  return apiCall(`/provider/consultations/${consultationId}`);
+};

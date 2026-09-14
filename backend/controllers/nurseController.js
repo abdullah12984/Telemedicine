@@ -326,17 +326,32 @@ const updatePriority = async (req, res) => {
         message: "Triage case not found",
       });
     }
-
-    const updatedCase = await prisma.triageCase.update({
-      where: { id: caseId },
-      data: {
-        severity: severity || triageCase.severity,
-        priorityScore: priorityScore || triageCase.priorityScore,
-        nurseId: nurse.id,
-        status: "IN_PROGRESS",
-        updatedAt: new Date(),
+const updatedCase = await prisma.triageCase.update({
+  where: { id: caseId },
+  data: {
+    assignedProviderId: providerId,
+    triageNotes: triageNotes || triageCase.triageNotes,
+    status: "ASSIGNED",
+    assignedAt: new Date(),
+    updatedAt: new Date(),
+    nurseId: nurse.id,   // ✅ YE LINE ADD KAREIN
+  },
+  include: {
+    assignedProvider: {
+      select: {
+        firstName: true,
+        lastName: true,
+        specialty: true,
       },
-    });
+    },
+    patient: {
+      select: {
+        firstName: true,
+        lastName: true,
+      },
+    },
+  },
+});
 
     res.json({
       success: true,
@@ -427,6 +442,7 @@ const assignProvider = async (req, res) => {
         status: "ASSIGNED",
         assignedAt: new Date(),
         updatedAt: new Date(),
+          nurseId: nurse.id, 
       },
       include: {
         assignedProvider: {

@@ -211,8 +211,6 @@ const MedicalRecords = () => {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="visit_note">Visit Notes</SelectItem>
                   <SelectItem value="prescription">Prescriptions</SelectItem>
-                  <SelectItem value="lab_result">Lab Results</SelectItem>
-                  <SelectItem value="diagnosis">Diagnoses</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -222,12 +220,10 @@ const MedicalRecords = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 ">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="visit_note">Visit Notes</TabsTrigger>
           <TabsTrigger value="prescription">Prescriptions</TabsTrigger>
-          <TabsTrigger value="lab_result">Lab Results</TabsTrigger>
-          <TabsTrigger value="diagnosis">Diagnoses</TabsTrigger>
         </TabsList>
       </Tabs>
 

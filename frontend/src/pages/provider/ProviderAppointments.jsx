@@ -30,7 +30,7 @@ const ProviderAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("upcoming");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
@@ -54,7 +54,9 @@ const ProviderAppointments = () => {
   useEffect(() => {
     let result = appointments;
 
-    if (statusFilter !== "all") {
+       if (statusFilter === "upcoming") {
+      result = result.filter(apt => apt.status === "PENDING" || apt.status === "CONFIRMED");
+    } else if (statusFilter !== "all") {
       result = result.filter(apt => apt.status === statusFilter.toUpperCase());
     }
 
@@ -149,7 +151,8 @@ const ProviderAppointments = () => {
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
+                                <SelectContent>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>

@@ -544,10 +544,10 @@ const getPatientDetails = async (req, res) => {
 };
 
 // ============= GET PROVIDER CONSULTATIONS =============
+// ============= GET PROVIDER CONSULTATIONS =============
 const getConsultations = async (req, res) => {
   try {
     const userId = req.userId;
-    const { status } = req.query;
 
     const provider = await prisma.provider.findUnique({
       where: { userId },
@@ -557,15 +557,37 @@ const getConsultations = async (req, res) => {
       return res.status(404).json({ message: "Provider not found" });
     }
 
-    const whereClause = {
-      providerId: provider.id,
-    };
+    // Auto-sync: If any appointments exist without a consultation record, create one now
+    const appointmentsWithoutConsultation = await prisma.appointment.findMany({
+      where: {
+        providerId: provider.id,
+        consultation: null,
+      },
+    });
+
+    for (const apt of appointmentsWithoutConsultation) {
+      try {
+        await prisma.consultation.create({
+          data: {
+            appointmentId: apt.id,
+            providerId: provider.id,
+            patientId: apt.patientId,
+            consultationDate: apt.appointmentDate || new Date(),
+          },
+        });
+      } catch (e) {
+        // Ignore if created concurrently
+      }
+    }
 
     const consultations = await prisma.consultation.findMany({
-      where: whereClause,
+      where: {
+        providerId: provider.id,
+      },
       include: {
         patient: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             phone: true,
@@ -573,9 +595,13 @@ const getConsultations = async (req, res) => {
         },
         appointment: {
           select: {
+            id: true,
             appointmentDate: true,
             startTime: true,
+            endTime: true,
             status: true,
+            type: true,
+            reason: true,
           },
         },
         prescriptions: {
@@ -606,6 +632,60 @@ const getConsultations = async (req, res) => {
     console.error("Get consultations error:", error);
     res.status(500).json({
       message: "Failed to get consultations",
+      error: error.message,
+    });
+  }
+};
+
+// ============= GET CONSULTATION BY ID OR APPOINTMENT ID =============
+const getConsultationById = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { consultationId } = req.params;
+
+    const provider = await prisma.provider.findUnique({
+      where: { userId },
+    });
+
+    if (!provider) {
+      return res.status(404).json({ message: "Provider not found" });
+    }
+
+    let consultation = await prisma.consultation.findFirst({
+      where: {
+        providerId: provider.id,
+        OR: [
+          { id: consultationId },
+          { appointmentId: consultationId },
+        ],
+      },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
+        appointment: true,
+        prescriptions: true,
+      },
+    });
+
+    if (!consultation) {
+      return res.status(404).json({ message: "Consultation not found" });
+    }
+
+    res.json({
+      success: true,
+      data: consultation,
+    });
+  } catch (error) {
+    console.error("Get consultation by ID error:", error);
+    res.status(500).json({
+      message: "Failed to get consultation",
       error: error.message,
     });
   }
@@ -689,15 +769,43 @@ const completeConsultation = async (req, res) => {
       return res.status(404).json({ message: "Provider not found" });
     }
 
-    const consultation = await prisma.consultation.findFirst({
+    // Find consultation by consultationId OR appointmentId
+    let consultation = await prisma.consultation.findFirst({
       where: {
-        id: consultationId,
         providerId: provider.id,
+        OR: [
+          { id: consultationId },
+          { appointmentId: consultationId },
+        ],
       },
       include: {
         appointment: true,
       },
     });
+
+    // If no consultation record existed yet, create it from the appointment
+    if (!consultation) {
+      const appointment = await prisma.appointment.findFirst({
+        where: {
+          id: consultationId,
+          providerId: provider.id,
+        },
+      });
+
+      if (appointment) {
+        consultation = await prisma.consultation.create({
+          data: {
+            appointmentId: appointment.id,
+            providerId: provider.id,
+            patientId: appointment.patientId,
+            consultationDate: new Date(),
+          },
+          include: {
+            appointment: true,
+          },
+        });
+      }
+    }
 
     if (!consultation) {
       return res.status(404).json({ message: "Consultation not found" });
@@ -705,7 +813,7 @@ const completeConsultation = async (req, res) => {
 
     // Update consultation
     const updatedConsultation = await prisma.consultation.update({
-      where: { id: consultationId },
+      where: { id: consultation.id },
       data: {
         diagnosis: diagnosis || consultation.diagnosis,
         diagnosisCodes: diagnosisCodes || consultation.diagnosisCodes,
@@ -714,7 +822,7 @@ const completeConsultation = async (req, res) => {
       },
     });
 
-    // Update appointment status
+    // ✅ Mark appointment status as COMPLETED
     await prisma.appointment.update({
       where: { id: consultation.appointmentId },
       data: {
@@ -722,7 +830,46 @@ const completeConsultation = async (req, res) => {
       },
     });
 
-    // Create medical record
+        // ✅ Mark patient's active triage case as COMPLETED
+    await prisma.triageCase.updateMany({
+      where: {
+        patientId: consultation.patientId,
+        status: {
+          in: ["PENDING", "IN_PROGRESS", "ASSIGNED"],
+        },
+      },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+      },
+    });
+
+    // ✅ Notify Nurse that consultation is completed
+    const activeNurseCases = await prisma.triageCase.findMany({
+      where: {
+        patientId: consultation.patientId,
+        nurseId: { not: null },
+      },
+      include: {
+        nurse: true,
+      },
+    });
+
+    for (const tc of activeNurseCases) {
+      if (tc.nurse?.userId) {
+        await prisma.notification.create({
+          data: {
+            userId: tc.nurse.userId,
+            patientId: consultation.patientId,
+            title: "Consultation Completed",
+            message: `Dr. ${provider.firstName} ${provider.lastName} completed consultation for patient.`,
+            type: "CONSULTATION_COMPLETED",
+          },
+        });
+      }
+    }
+
+    // Create medical record if visit notes or diagnosis exist
     if (diagnosis || visitNotes) {
       await prisma.medicalRecord.create({
         data: {
@@ -774,12 +921,58 @@ const createPrescription = async (req, res) => {
       return res.status(404).json({ message: "Provider not found" });
     }
 
-    const consultation = await prisma.consultation.findFirst({
+    // Find consultation by consultationId OR appointmentId
+    let consultation = await prisma.consultation.findFirst({
       where: {
-        id: consultationId,
         providerId: provider.id,
+        OR: [
+          { id: consultationId },
+          { appointmentId: consultationId },
+        ],
+      },
+      include: {
+        patient: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
+
+    // If not found, check if consultationId is an appointmentId
+    if (!consultation) {
+      const appointment = await prisma.appointment.findFirst({
+        where: {
+          id: consultationId,
+          providerId: provider.id,
+        },
+        include: {
+          patient: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (appointment) {
+        consultation = await prisma.consultation.create({
+          data: {
+            appointmentId: appointment.id,
+            providerId: provider.id,
+            patientId: appointment.patientId,
+            consultationDate: new Date(),
+          },
+          include: {
+            patient: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        });
+      }
+    }
 
     if (!consultation) {
       return res.status(404).json({ message: "Consultation not found" });
@@ -792,7 +985,7 @@ const createPrescription = async (req, res) => {
       });
     }
 
-    // Create prescription
+    // Create prescription linked to the patient, doctor, and consultation
     const prescription = await prisma.prescription.create({
       data: {
         consultationId: consultation.id,
@@ -810,7 +1003,7 @@ const createPrescription = async (req, res) => {
       },
     });
 
-    // Create medical record
+    // Create medical record entry
     await prisma.medicalRecord.create({
       data: {
         patientId: consultation.patientId,
@@ -822,6 +1015,44 @@ const createPrescription = async (req, res) => {
         providerName: `${provider.firstName} ${provider.lastName}`,
       },
     });
+
+    // Create notification for patient so they are alerted
+    if (consultation.patient?.user?.id) {
+      await prisma.notification.create({
+        data: {
+          userId: consultation.patient.user.id,
+          patientId: consultation.patientId,
+          title: "New Prescription Received",
+          message: `Dr. ${provider.firstName} ${provider.lastName} has sent you a prescription for ${medication}.`,
+          type: "PRESCRIPTION_CREATED",
+        },
+      });
+    }
+
+        // ✅ Notify Nurse that prescription was created
+    const nurseCasesForRx = await prisma.triageCase.findMany({
+      where: {
+        patientId: consultation.patientId,
+        nurseId: { not: null },
+      },
+      include: {
+        nurse: true,
+      },
+    });
+
+    for (const tc of nurseCasesForRx) {
+      if (tc.nurse?.userId) {
+        await prisma.notification.create({
+          data: {
+            userId: tc.nurse.userId,
+            patientId: consultation.patientId,
+            title: "Prescription Issued",
+            message: `Dr. ${provider.firstName} ${provider.lastName} issued a prescription (${medication}) for patient.`,
+            type: "PRESCRIPTION_READY",
+          },
+        });
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -980,6 +1211,7 @@ const getAvailability = async (req, res) => {
       dayOfWeek: a.dayOfWeek,
       startTime: a.startTime,
       endTime: a.endTime,
+      slotDuration: a.slotDuration || 30,
       isAvailable: a.isAvailable,
       isRecurring: a.isRecurring,
       dayName: getDayName(a.dayOfWeek),
@@ -1006,6 +1238,7 @@ const getDayName = (day) => {
 };
 
 // ============= UPDATE AVAILABILITY =============
+// ============= UPDATE AVAILABILITY =============
 const updateAvailability = async (req, res) => {
   try {
     const userId = req.userId;
@@ -1016,17 +1249,82 @@ const updateAvailability = async (req, res) => {
     });
 
     if (!provider) {
-      return res.status(404).json({ message: "Provider not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Provider not found",
+      });
     }
 
-    // Delete existing availability
-    await prisma.providerAvailability.deleteMany({
-      where: {
-        providerId: provider.id,
-      },
+    // ✅ Validate input
+    if (!availability || !Array.isArray(availability)) {
+      return res.status(400).json({
+        success: false,
+        message: "Availability must be an array",
+      });
+    }
+
+    // ✅ Validate each slot
+    for (const slot of availability) {
+      if (
+        slot.dayOfWeek === undefined ||
+        slot.dayOfWeek === null ||
+        !slot.startTime ||
+        !slot.endTime
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Each slot must have dayOfWeek, startTime, endTime",
+        });
+      }
+      if (slot.startTime >= slot.endTime) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid slot: start (${slot.startTime}) must be before end (${slot.endTime})`,
+        });
+      }
+    }
+
+    // ✅ CHECK OVERLAPS within same day
+    const sorted = [...availability].sort((a, b) => {
+      if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
+      return a.startTime.localeCompare(b.startTime);
     });
 
-    // Create new availability
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        if (sorted[i].dayOfWeek !== sorted[j].dayOfWeek) continue;
+
+        const aStart = sorted[i].startTime;
+        const aEnd = sorted[i].endTime;
+        const bStart = sorted[j].startTime;
+        const bEnd = sorted[j].endTime;
+
+        // Overlap condition: aStart < bEnd && bStart < aEnd
+        if (aStart < bEnd && bStart < aEnd) {
+          const dayName = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ][sorted[i].dayOfWeek];
+
+          return res.status(400).json({
+            success: false,
+            message: `Overlapping slots on ${dayName}: (${aStart}-${aEnd}) overlaps with (${bStart}-${bEnd})`,
+          });
+        }
+      }
+    }
+
+    // ✅ Delete existing availability
+    await prisma.providerAvailability.deleteMany({
+      where: { providerId: provider.id },
+    });
+
+    // ✅ Create new availability
     const created = [];
     for (const slot of availability) {
       const newSlot = await prisma.providerAvailability.create({
@@ -1035,6 +1333,7 @@ const updateAvailability = async (req, res) => {
           dayOfWeek: slot.dayOfWeek,
           startTime: slot.startTime,
           endTime: slot.endTime,
+          slotDuration: slot.slotDuration || 30,
           isAvailable: slot.isAvailable !== undefined ? slot.isAvailable : true,
           isRecurring: slot.isRecurring !== undefined ? slot.isRecurring : true,
         },
@@ -1049,7 +1348,16 @@ const updateAvailability = async (req, res) => {
     });
   } catch (error) {
     console.error("Update availability error:", error);
+
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate availability slot found",
+      });
+    }
+
     res.status(500).json({
+      success: false,
       message: "Failed to update availability",
       error: error.message,
     });
@@ -1195,4 +1503,5 @@ module.exports = {
   updateAvailability,
   getRefillRequests,
   processRefillRequest,
+  getConsultationById,
 };
