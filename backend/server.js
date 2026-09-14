@@ -103,17 +103,6 @@ app.use((err, req, res, next) => {
   });
 });
 // DEBUG: list all registered routes on startup
-console.log("\n📋 Registered Routes:");
-app._router.stack
-  .filter((r) => r.name === "router")
-  .forEach((r) => {
-    const path = r.regexp.source
-      .replace("^\\/", "/")
-      .replace("\\/?(?=\\/|$)", "")
-      .replace(/\\\//g, "/");
-    console.log(`   ${path}`);
-  });
-console.log("");
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health: http://localhost:${PORT}/api/health`);
