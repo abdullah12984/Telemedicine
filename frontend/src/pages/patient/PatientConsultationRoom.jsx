@@ -83,6 +83,17 @@ const PatientConsultationRoom = () => {
     }
   }, [remoteStream, isConnected]);
 
+  // ✅ Fix: Local PiP video attach when video element mounts
+useEffect(() => {
+  if (!loading && localVideoRef.current && localStreamRef.current) {
+    console.log("📺 Attaching local stream to Patient's PiP...");
+    localVideoRef.current.srcObject = localStreamRef.current;
+    localVideoRef.current.play().catch((err) =>
+      console.log("Local PiP play error:", err)
+    );
+  }
+}, [loading]);
+
   useEffect(() => {
     let mounted = true;
 
